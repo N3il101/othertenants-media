@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Authorisation code — othertenants</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 40rem; margin: 3rem auto; padding: 0 1.25rem;
+         font: 16px/1.6 system-ui, -apple-system, Segoe UI, sans-serif; }
+  h1 { font-size: 1.35rem; }
+  #code { font: 15px/1.5 ui-monospace, Consolas, monospace; word-break: break-all;
+          padding: .9rem 1rem; border: 1px solid #8884; border-radius: .5rem;
+          background: #8881; margin: .75rem 0; }
+  button { font: inherit; padding: .55rem 1.1rem; border-radius: .5rem;
+           border: 1px solid #8886; background: #8881; cursor: pointer; }
+  .err { color: #c33; }
+  .muted { color: #777; font-size: .92rem; }
+</style>
+
+<h1>Authorisation code</h1>
+<div id="out">reading…</div>
+
+<script>
+  // TikTok does not accept localhost as a redirect URI, so there is no local
+  // server to catch this. The code comes back in the query string; this page
+  // shows it so it can be pasted into scripts/tiktok-auth.js.
+  //
+  // Nothing is transmitted from here. The page is static, has no analytics and
+  // makes no requests — the code is only ever in the address bar of whoever
+  // just clicked Allow.
+  const q = new URLSearchParams(location.search);
+  const code = q.get('code');
+  const error = q.get('error');
+  const desc = q.get('error_description');
+  const out = document.getElementById('out');
+
+  if (error) {
+    out.innerHTML = '<p class="err">TikTok returned an error: <strong>' +
+      error.replace(/[<>&]/g, '') + '</strong></p><p class="muted">' +
+      (desc || '').replace(/[<>&]/g, '') + '</p>';
+  } else if (!code) {
+    out.innerHTML = '<p class="err">No code in the URL.</p>' +
+      '<p class="muted">Open the authorisation link from the terminal rather ' +
+      'than this page directly.</p>';
+  } else {
+    out.innerHTML =
+      '<p>Copy this and paste it back into the terminal:</p>' +
+      '<div id="code"></div>' +
+      '<button id="copy">Copy</button> ' +
+      '<span class="muted" id="said"></span>' +
+      '<p class="muted">It is single-use and expires in a few minutes.</p>';
+    document.getElementById('code').textContent = code;
+    document.getElementById('copy').onclick = async () => {
+      await navigator.clipboard.writeText(code);
+      document.getElementById('said').textContent = 'copied';
+    };
+  }
+</script>
