@@ -1,0 +1,126 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connect TikTok — othertenants</title>
+
+<!--
+  THE INTEGRATION SURFACE.
+
+  TikTok's app review asks for a demo video that "showcases the website where
+  the features will actually be integrated" and "clearly shows the user
+  interface and user interactions". Until now this site was a landing page and
+  two legal documents, so there was nothing on it to show: the posting itself
+  runs on a schedule with no screen attached.
+
+  This page is that surface, and it is not a mock-up. The button below builds a
+  real Login Kit authorisation URL from the sandbox client key and the scopes
+  the pipeline actually requests, and sends the operator to TikTok's own consent
+  screen. Coming back, callback.html receives the code.
+
+  NO SECRET LIVES HERE. A client key is public by design — it travels in the
+  query string of every OAuth request. The client secret never leaves the
+  machine that runs the exchange, which is why the code is displayed for the
+  operator to carry rather than swapped for a token in the browser.
+-->
+
+<style>
+  :root { color-scheme: light dark; --line: #8884; --dim: #8881; }
+  body { max-width: 44rem; margin: 3.5rem auto; padding: 0 1.25rem;
+         font: 16px/1.65 system-ui, -apple-system, Segoe UI, sans-serif; }
+  h1 { font-size: 1.6rem; margin-bottom: .2rem; }
+  h2 { font-size: 1.05rem; margin: 2rem 0 .5rem; }
+  p.lead { font-size: 1.05rem; color: #777; margin-top: 0; }
+  .card { border: 1px solid var(--line); border-radius: .75rem;
+          padding: 1.25rem 1.4rem; margin: 1.5rem 0; }
+  button { font: inherit; font-weight: 600; padding: .7rem 1.4rem;
+           border-radius: .5rem; border: 0; background: #E8A33D; color: #111;
+           cursor: pointer; }
+  button:hover { filter: brightness(1.06); }
+  ul { padding-left: 1.15rem; margin: .4rem 0; }
+  li { margin: .3rem 0; }
+  code { font: 14px ui-monospace, Consolas, monospace; background: var(--dim);
+         padding: .1rem .35rem; border-radius: .3rem; }
+  .muted { color: #777; font-size: .92rem; }
+  .scope { display: flex; gap: .6rem; align-items: baseline; margin: .5rem 0; }
+  .scope code { flex: none; }
+</style>
+
+<h1>othertenants</h1>
+<p class="lead">Connect the TikTok account the daily post is published to.</p>
+
+<div class="card">
+  <p>
+    One account is connected: <strong>@othertenants</strong>, owned by the person
+    running this page. There is no sign-up and no second user.
+  </p>
+  <p>
+    <button id="connect">Connect TikTok account</button>
+  </p>
+  <p class="muted" id="target"></p>
+</div>
+
+<h2>What this asks TikTok for</h2>
+
+<div class="scope">
+  <code>user.info.basic</code>
+  <span>Confirms the token belongs to the right account. Only <code>open_id</code> is read.</span>
+</div>
+<div class="scope">
+  <code>video.upload</code>
+  <span>Sends the day's 60-second video to the account's inbox as a draft.</span>
+</div>
+<div class="scope">
+  <code>video.publish</code>
+  <span>Publishes the same scheduled post without a manual step. Requested at review.</span>
+</div>
+
+<h2>What happens after you allow it</h2>
+<ol>
+  <li>TikTok returns to <a href="callback.html">callback.html</a> on this site with a one-time code.</li>
+  <li>The operator exchanges that code for a token on their own machine. The
+      client secret never reaches this page.</li>
+  <li>A scheduled job posts one video and two photo cards a day. Photos are
+      pulled by TikTok from this domain, which is verified under the app.</li>
+</ol>
+
+<p class="muted">
+  <a href="privacy.html">Privacy Policy</a> ·
+  <a href="terms.html">Terms of Service</a> ·
+  <a href="./">Home</a>
+</p>
+
+<script>
+  // The sandbox client key. Public by design: it is in the query string of
+  // every authorisation request TikTok receives. The secret is not here and
+  // cannot be, because this is a static page anyone can read.
+  const CLIENT_KEY = 'sbawknukwpcue9raq5';
+
+  // Must match the redirect URI registered on the app exactly, including the
+  // filename. TikTok refuses localhost outright, which is why this is a page on
+  // a real domain rather than a local server.
+  const REDIRECT = 'https://n3il101.github.io/othertenants-media/callback.html';
+
+  // The scopes the pipeline actually uses. video.publish is included because it
+  // is what the app is in review for; before approval TikTok simply declines to
+  // grant it and the inbox flow carries on working.
+  const SCOPES = 'user.info.basic,video.upload,video.publish';
+
+  document.getElementById('target').textContent =
+    'Redirects to ' + REDIRECT;
+
+  document.getElementById('connect').addEventListener('click', () => {
+    // CSRF state. crypto.randomUUID rather than Math.random: this value is the
+    // only thing tying the redirect back to the click that started it.
+    const state = crypto.randomUUID();
+    try { sessionStorage.setItem('tiktok_state', state); } catch (_) { /* private mode */ }
+
+    const url = new URL('https://www.tiktok.com/v2/auth/authorize/');
+    url.searchParams.set('client_key', CLIENT_KEY);
+    url.searchParams.set('scope', SCOPES);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('redirect_uri', REDIRECT);
+    url.searchParams.set('state', state);
+
+    location.href = url.toString();
+  });
+</script>
