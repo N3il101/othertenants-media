@@ -71,7 +71,7 @@
 </div>
 <div class="scope">
   <code>video.publish</code>
-  <span>Publishes the same scheduled post without a manual step. Requested at review.</span>
+  <span>Not yet granted. In review, so the scheduled post can go out without a manual step.</span>
 </div>
 
 <h2>What happens after you allow it</h2>
@@ -100,10 +100,19 @@
   // a real domain rather than a local server.
   const REDIRECT = 'https://n3il101.github.io/othertenants-media/callback.html';
 
-  // The scopes the pipeline actually uses. video.publish is included because it
-  // is what the app is in review for; before approval TikTok simply declines to
-  // grant it and the inbox flow carries on working.
-  const SCOPES = 'user.info.basic,video.upload,video.publish';
+  // ONLY THE SCOPES THE APP HAS BEEN GRANTED.
+  //
+  // video.publish was in this list and it broke the whole flow: TikTok answers
+  // "Something went wrong ... correct the following: scope" and never shows the
+  // consent screen at all. It does NOT quietly drop a scope it has not granted
+  // — one ungranted scope fails the entire authorisation request.
+  //
+  // So this stays at the two granted scopes until the audit clears, and
+  // video.publish goes back in on the same day MODE flips to 'direct' in
+  // src/stages/publish-tiktok.js. The page still LISTS video.publish below as
+  // something the app is in review for, which is honest and costs nothing;
+  // asking for it here costs the login.
+  const SCOPES = 'user.info.basic,video.upload';
 
   document.getElementById('target').textContent =
     'Redirects to ' + REDIRECT;
